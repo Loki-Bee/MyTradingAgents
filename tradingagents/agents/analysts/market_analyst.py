@@ -7,7 +7,7 @@ from tradingagents.agents.utils.agent_utils import (
 )
 from tradingagents.dataflows.config import get_config
 
-
+#ok
 def create_market_analyst(llm):
 
     def market_analyst_node(state):

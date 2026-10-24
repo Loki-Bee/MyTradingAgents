@@ -58,10 +58,16 @@ class NormalizedChatOpenAI(ChatOpenAI):
     purpose-built subclasses below so this base class stays small.
     """
 
+    #Responses API 会将内容作为类型化块（如推理过程、文本等）的列表返回。
+    # invoke 方法会将其规范化（统一）为字符串，以便下游处理时保持一致。
+    # with_structured_output 默认采用函数调用模式，从而避开 Responses-API 的解析路径
+    # （langchain-openai 的该解析路径在每次调用时都会发出嘈杂的 
+    # PydanticSerializationUnexpectedValue 警告，但这并不影响正确性）。
+
     # 应用层重试参数（由 get_llm 从配置注入；SDK 层 max_retries 恒 0）。
     app_retries: int = 0
     app_retry_delay: float = 5.0   # 初始退避（秒），指数翻倍：5s, 10s, 20s...
-
+#底层 SDK 的重试是固定的 0.5 秒，且对多 Agent 场景不友好。
     def invoke(self, input, config=None, **kwargs):
         # 应用层重试：SDK 层 max_retries 恒 0（见 trading_graph._resilience_kwargs），
         # 错误直接抛到这里，由本层按指数退避重试（5s, 10s, 20s...），而非 SDK 的 0.5s。
@@ -133,6 +139,12 @@ def _input_to_messages(input_: Any) -> list:
     both bare-list invocations and ChatPromptTemplate-driven ones, so
     treating only ``list`` here would silently skip half the call sites.
     """
+
+# 将 LangChain 的 LLM 输入标准化为消息对象列表。
+# 接受消息列表、ChatPromptValue（来自 ChatPromptTemplate），或其他任何东西（视为无消息）。
+# 供需要遍历出站消息历史的提供商使用；特别是 DeepSeek 的思考模式传播（thinking-mode propagation），
+# 必须同时兼容直接传列表和通过 ChatPromptTemplate 驱动的调用。如果这里只处理 list，会静默跳过一半的调用点。
+
     if isinstance(input_, list):
         return input_
     if hasattr(input_, "to_messages"):
@@ -155,7 +167,17 @@ class DeepSeekChatOpenAI(NormalizedChatOpenAI):
        still bound as a tool, while the capability-aware base class suppresses
        only the incompatible request parameter.
     """
+    # 在基于 OpenAI 兼容客户端之上针对 DeepSeek 的专属重写。
+    # 有两个不适用于其他 OpenAI 兼容提供商的“怪癖（特殊行为）”：
+    # 思考模式的往返（回传）。当 DeepSeek 的思考模型返回包含 reasoning_content（思考内容）的响应时，
+    # 在下一轮对话中，该字段必须作为 assistant 消息的一部分原样回传，否则 API 会直接报 HTTP 400 错误。
+    # _create_chat_result 负责在接收时捕获该字段，而 _get_request_payload 负责在发送时重新附加它。
+    # DeepSeek 推理模型拒绝 tool_choice。它们的 Schema 依然会被绑定为一个工具，而具备能力感知的基类
+    # capability-aware base class 只会抑制（剔除）那个不兼容的请求参数。
 
+
+# 在发请求的最后一刻，把历史记录里的 AIMessage 翻出来，查一下它的“备用口袋”，
+# 把存着的思考过程拿出来，重新强行塞回 HTTP 请求体中。完美骗过 DeepSeek 的校验！
     def _get_request_payload(self, input_, *, stop=None, **kwargs):
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
         outgoing = payload.get("messages", [])
@@ -167,7 +189,9 @@ class DeepSeekChatOpenAI(NormalizedChatOpenAI):
                 message_dict["reasoning_content"] = reasoning
         return payload
 
-    def _create_chat_result(self, response, generation_info=None):
+# DeepSeek 把思考过程放在了非标准的位置，原生 LangChain 看不懂直接扔了。这段代码把它捡回来，
+# 藏进 additional_kwargs 字典里（你可以理解为 LangChain 消息对象的一个“备用口袋”），随身带着。
+    def _create_chat_result(self, response, generation_info=None):#接收完整响应后（只有 invoke 会用到）
         chat_result = super()._create_chat_result(response, generation_info)
         response_dict = (
             response
@@ -184,9 +208,12 @@ class DeepSeekChatOpenAI(NormalizedChatOpenAI):
                 generation.message.additional_kwargs["reasoning_content"] = reasoning
         return chat_result
 
+# 流式输出时，思考过程是一点点吐出来的。代码把这一小段一小段的话存进备用口袋。
+# 最神奇的是，LangChain 底层的 chunk 合并机制会自动把这些零碎的文字
+# 拼成一整段完整的思考过程（注释里特意解释了这一点），最终挂载在最后的 AIMessage 上。
     def _convert_chunk_to_generation_chunk(
         self, chunk, default_chunk_class, base_generation_info
-    ):
+    ):#接收流式响应中（只有 stream 会用到）
         # langchain-openai's streaming path drops ``reasoning_content`` from
         # deltas. Rescue it into ``additional_kwargs`` so the round-trip on
         # the next turn — see ``_get_request_payload`` — still has it. Chunk
@@ -211,7 +238,9 @@ class MinimaxChatOpenAI(NormalizedChatOpenAI):
     ``reasoning_split`` request flag keeps that internal trace out of the
     user-facing content that downstream agents store and render.
     """
-
+# M2.x 模型默认会将推理（思考过程）嵌入在 <think> 标签块中。
+# 通过使用该提供商提供的 reasoning_split 请求参数，可以将这类内部思考痕迹从面向用户的内容中剥离出去，
+# 从而避免下层智能体（Agents）存储和渲染这些面向用户的内容时混入思考过程。
     def _get_request_payload(self, input_, *, stop=None, **kwargs):
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
         capabilities = get_capabilities(self.model_name)
@@ -231,7 +260,7 @@ _PROVIDER_CONFIG = {
     "xai": ("https://api.x.ai/v1", "XAI_API_KEY"),
     "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY"),
     "qwen": ("https://dashscope.aliyuncs.com/compatible-mode/v1", "DASHSCOPE_API_KEY"),
-    "glm": ("https://open.bigmodel.cn/api/paas/v4/", "ZHIPU_API_KEY"),
+    "glm": ("https://open.bigmodel.cn/api/coding/paas/v4", "ZHIPU_API_KEY"),
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
     "ollama": ("http://localhost:11434/v1", None),
     "minimax": ("https://api.minimax.chat/v1", "MINIMAX_API_KEY"),

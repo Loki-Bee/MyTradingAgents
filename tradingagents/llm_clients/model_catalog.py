@@ -11,128 +11,134 @@ ProviderModeOptions = Dict[str, Dict[str, List[ModelOption]]]
 MODEL_OPTIONS: ProviderModeOptions = {
     "openai": {
         "quick": [
-            ("GPT-5.4 Mini - Fast, strong coding and tool use", "gpt-5.4-mini"),
-            ("GPT-5.4 Nano - Cheapest, high-volume tasks", "gpt-5.4-nano"),
-            ("GPT-5.4 - Latest frontier, 1M context", "gpt-5.4"),
-            ("GPT-4.1 - Smartest non-reasoning model", "gpt-4.1"),
+            ("GPT-6 Luna - Most efficient for high-volume tasks", "gpt-6-luna"),
+            ("GPT-6 Sol - Strong reasoning and agentic workflows", "gpt-6-sol"),
+            ("GPT-5.6 Luna - Efficient previous-generation model", "gpt-5.6-luna"),
         ],
         "deep": [
-            ("GPT-5.4 - Latest frontier, 1M context", "gpt-5.4"),
-            ("GPT-5.2 - Strong reasoning, cost-effective", "gpt-5.2"),
-            ("GPT-5.4 Mini - Fast, strong coding and tool use", "gpt-5.4-mini"),
-            ("GPT-5.4 Pro - Most capable, expensive ($30/$180 per 1M tokens)", "gpt-5.4-pro"),
+            ("GPT-6 Astra - Most capable for complex reasoning and coding", "gpt-6-astra"),
+            ("GPT-6 Sol - Strong reasoning and agentic workflows", "gpt-6-sol"),
+            ("GPT-5.6 Sol - Previous-generation flagship", "gpt-5.6-sol"),
+            ("Custom model ID", "custom"),
         ],
     },
+
     "anthropic": {
         "quick": [
-            ("Claude Sonnet 4.6 - Best speed and intelligence balance", "claude-sonnet-4-6"),
-            ("Claude Haiku 4.5 - Fast, near-instant responses", "claude-haiku-4-5"),
-            ("Claude Sonnet 4.5 - Agents and coding", "claude-sonnet-4-5"),
+            ("Claude Sonnet 5 - Fast and capable for agents and coding", "claude-sonnet-5"),
+            ("Claude Haiku 4.5 - Fastest, cost-efficient", "claude-haiku-4-5"),
         ],
         "deep": [
-            ("Claude Opus 4.6 - Most intelligent, agents and coding", "claude-opus-4-6"),
-            ("Claude Opus 4.5 - Premium, max intelligence", "claude-opus-4-5"),
-            ("Claude Sonnet 4.6 - Best speed and intelligence balance", "claude-sonnet-4-6"),
-            ("Claude Sonnet 4.5 - Agents and coding", "claude-sonnet-4-5"),
+            ("Claude Opus 5.5 - Latest flagship for complex agentic work", "claude-opus-5-5"),
+            ("Claude Fable 5.1 - Long-running agents and complex workflows", "claude-fable-5-1"),
+            ("Claude Sonnet 5 - Strong speed/intelligence balance", "claude-sonnet-5"),
+            ("Custom model ID", "custom"),
         ],
     },
+
     "google": {
         "quick": [
-            ("Gemini 3 Flash - Next-gen fast", "gemini-3-flash-preview"),
-            ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
-            ("Gemini 3.1 Flash Lite - Most cost-efficient", "gemini-3.1-flash-lite-preview"),
-            ("Gemini 2.5 Flash Lite - Fast, low-cost", "gemini-2.5-flash-lite"),
+            ("Gemini 3.8 Flash - Latest stable fast model", "gemini-3.8-flash"),
+            ("Gemini 3.5 Flash-Lite - Cost-efficient high-volume", "gemini-3.5-flash-lite"),
+            ("Gemini 3.7 Flash - Previous-generation stable Flash", "gemini-3.7-flash"),
         ],
         "deep": [
-            ("Gemini 3.1 Pro - Reasoning-first, complex workflows", "gemini-3.1-pro-preview"),
-            ("Gemini 3 Flash - Next-gen fast", "gemini-3-flash-preview"),
-            ("Gemini 2.5 Pro - Stable pro model", "gemini-2.5-pro"),
-            ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
+            ("Gemini 3.1 Pro - Advanced reasoning and complex workflows", "gemini-3.1-pro-preview"),
+            ("Gemini 3.8 Flash - Latest stable general model", "gemini-3.8-flash"),
+            ("Gemini 2.5 Pro - Legacy stable Pro model", "gemini-2.5-pro"),
+            ("Custom model ID", "custom"),
         ],
     },
+
     "xai": {
         "quick": [
-            ("Grok 4.1 Fast (Non-Reasoning) - Speed optimized, 2M ctx", "grok-4-1-fast-non-reasoning"),
-            ("Grok 4 Fast (Non-Reasoning) - Speed optimized", "grok-4-fast-non-reasoning"),
-            ("Grok 4.1 Fast (Reasoning) - High-performance, 2M ctx", "grok-4-1-fast-reasoning"),
+            ("Grok 4.7 - Latest flagship, configurable reasoning", "grok-4.7"),
+            ("Grok 4.6 - Fast frontier model", "grok-4.6"),
+            ("Grok 4.5 - Agentic coding and knowledge work", "grok-4.5"),
         ],
         "deep": [
-            ("Grok 4 - Flagship model", "grok-4-0709"),
-            ("Grok 4.1 Fast (Reasoning) - High-performance, 2M ctx", "grok-4-1-fast-reasoning"),
-            ("Grok 4 Fast (Reasoning) - High-performance", "grok-4-fast-reasoning"),
-            ("Grok 4.1 Fast (Non-Reasoning) - Speed optimized, 2M ctx", "grok-4-1-fast-non-reasoning"),
+            ("Grok 4.20 - Deep reasoning model", "grok-4.20"),
+            ("Grok 4.7 - Latest flagship reasoning model", "grok-4.7"),
+            ("Grok 4.5 - Strong agentic coding and reasoning", "grok-4.5"),
+            ("Custom model ID", "custom"),
         ],
     },
+
     "deepseek": {
         "quick": [
-            ("DeepSeek V4 Flash - Latest V4 fast model", "deepseek-v4-flash"),
-            ("DeepSeek V3.2", "deepseek-chat"),
+            ("DeepSeek V4.1 Flash - Latest fast model", "deepseek-flash"),
+            ("DeepSeek V4 Flash - Legacy alias", "deepseek-v4-flash"),
             ("Custom model ID", "custom"),
         ],
         "deep": [
-            ("DeepSeek V4 Pro - Latest V4 flagship model", "deepseek-v4-pro"),
-            ("DeepSeek V3.2 (thinking)", "deepseek-reasoner"),
-            ("DeepSeek V3.2", "deepseek-chat"),
+            ("DeepSeek V4 Pro - Latest flagship reasoning model", "deepseek-v4-pro"),
+            ("DeepSeek V4.1 Flash - Latest fast reasoning model", "deepseek-flash"),
             ("Custom model ID", "custom"),
         ],
     },
+
     "qwen": {
         "quick": [
-            ("Qwen 3.5 Flash", "qwen3.5-flash"),
-            ("Qwen Plus", "qwen-plus"),
+            ("Qwen 3.8 Flash - Latest fast model", "qwen3.8-flash"),
+            ("Qwen 3.7 Flash - Fast previous-generation model", "qwen3.7-flash"),
+            ("Qwen Plus - Stable general-purpose model", "qwen-plus"),
             ("Custom model ID", "custom"),
         ],
         "deep": [
-            ("Qwen 3.6 Plus", "qwen3.6-plus"),
-            ("Qwen 3.5 Plus", "qwen3.5-plus"),
-            ("Qwen 3 Max", "qwen3-max"),
+            ("Qwen 3.8 Max - Latest flagship reasoning model", "qwen3.8-max"),
+            ("Qwen 3.7 Plus - Strong reasoning and agent workflows", "qwen3.7-plus"),
+            ("Qwen 3.7 Max - Previous-generation flagship", "qwen3.7-max"),
             ("Custom model ID", "custom"),
         ],
     },
+
     "glm": {
         "quick": [
-            ("GLM-5.3-Flash - Latest fast model", "glm-5.3-flash"),
-            ("GLM-5.3 - Latest flagship", "glm-5.3"),
-            ("GLM-5", "glm-5"),
-            ("GLM-4.7", "glm-4.7"),
+            ("GLM-5.3-Flash - Latest fast multimodal Agent model", "glm-5.3-flash"),
+            ("GLM-5.3 - Latest flagship model", "glm-5.3"),
+            ("GLM-5.2 - Previous-generation flagship", "glm-5.2"),
             ("Custom model ID", "custom"),
         ],
         "deep": [
-            ("GLM-5.3 - Latest flagship model", "glm-5.3"),
-            ("GLM-5.2", "glm-5.2"),
-            ("GLM-5.1", "glm-5.1"),
-            ("GLM-5", "glm-5"),
+            ("GLM-5.3 - Latest flagship reasoning model", "glm-5.3"),
+            ("GLM-5.2 - Strong previous-generation model", "glm-5.2"),
+            ("GLM-5.1 - Previous-generation model", "glm-5.1"),
             ("Custom model ID", "custom"),
         ],
     },
+
     "minimax": {
         "quick": [
-            ("MiniMax-M2.7-highspeed - Latest fast model", "MiniMax-M2.7-highspeed"),
-            ("MiniMax-M2.5-highspeed - Stable fast model", "MiniMax-M2.5-highspeed"),
+            ("MiniMax-M3 - Latest multimodal Agent model", "MiniMax-M3"),
+            ("MiniMax-M2.7-highspeed - Fast M2.7 model", "MiniMax-M2.7-highspeed"),
+            ("MiniMax-M2.7 - Previous flagship", "MiniMax-M2.7"),
             ("Custom model ID", "custom"),
         ],
         "deep": [
-            ("MiniMax-M2.7 - Latest flagship model", "MiniMax-M2.7"),
-            ("MiniMax-M2.5 - Stable flagship model", "MiniMax-M2.5"),
-            ("MiniMax-M2.7-highspeed - Fast alternative", "MiniMax-M2.7-highspeed"),
+            ("MiniMax-M3 - Latest flagship reasoning model", "MiniMax-M3"),
+            ("MiniMax-M2.7 - Strong reasoning model", "MiniMax-M2.7"),
+            ("MiniMax-M2.7-highspeed - Faster alternative", "MiniMax-M2.7-highspeed"),
             ("Custom model ID", "custom"),
         ],
     },
-    # OpenRouter: fetched dynamically. Azure: any deployed model name.
+
+    # Ollama models depend on what you have pulled locally.
+    # Keep these as common examples; users can add their own model IDs.
     "ollama": {
         "quick": [
-            ("Qwen3:latest (8B, local)", "qwen3:latest"),
-            ("GPT-OSS:latest (20B, local)", "gpt-oss:latest"),
-            ("GLM-4.7-Flash:latest (30B, local)", "glm-4.7-flash:latest"),
+            ("Qwen3 - Local model", "qwen3:latest"),
+            ("GPT-OSS - Local model", "gpt-oss:latest"),
+            ("GLM-4.7-Flash - Local model", "glm-4.7-flash:latest"),
+            ("Custom local model", "custom"),
         ],
         "deep": [
-            ("GLM-4.7-Flash:latest (30B, local)", "glm-4.7-flash:latest"),
-            ("GPT-OSS:latest (20B, local)", "gpt-oss:latest"),
-            ("Qwen3:latest (8B, local)", "qwen3:latest"),
+            ("GLM-4.7-Flash - Local model", "glm-4.7-flash:latest"),
+            ("GPT-OSS - Local model", "gpt-oss:latest"),
+            ("Qwen3 - Local model", "qwen3:latest"),
+            ("Custom local model", "custom"),
         ],
     },
 }
-
 
 def get_model_options(provider: str, mode: str) -> List[ModelOption]:
     """Return shared model options for a provider and selection mode."""

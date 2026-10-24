@@ -15,7 +15,7 @@ so that:
   markdown shape the rest of the system already consumes, so display,
   memory log, and saved reports keep working unchanged
 """
-
+###researcher trader portfolio manager结构化输出格式定义文件
 from __future__ import annotations
 
 from enum import Enum
@@ -187,7 +187,7 @@ class PortfolioDecision(BaseModel):
     )
     time_horizon: Optional[str] = Field(
         default=None,
-        description="Optional analysis horizon, e.g. '3-6 months'.",
+        description="Optional analysis horizon, e.g. '7 days','1-2 weeks','1-3 months'.",
     )
 
 

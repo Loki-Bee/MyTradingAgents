@@ -363,7 +363,7 @@ def _preserve_mootdx_bestip():
     saved = None
     try:
         from mootdx import config as _cfg
-        _cfg.setup()
+        _cfg.setup()#把 ~/.mootdx/config.json 里存的 BESTIP 读进当前进程
         saved = _cfg.get("BESTIP")
         if isinstance(saved, dict):
             saved = dict(saved)
@@ -380,7 +380,7 @@ def _preserve_mootdx_bestip():
                 _cfg2.set("BESTIP", saved)
             except Exception as e:
                 logger.debug("恢复 mootdx BESTIP 失败：%s", e)
-
+#只要存在“做了 A 就必须做 B，且漏掉 B 会有隐蔽后果”的配对操作，就该包成上下文管理器，不要靠人记。
 
 def _get_mootdx_client():
     """Lazy-init 健壮版 mootdx Quotes client（TCP 连接，可复用）。
@@ -491,7 +491,7 @@ def _tencent_quote(codes: list[str]) -> dict[str, dict]:
     Returns dict[code] -> {name, price, pe_ttm, pb, mcap_yi, ...}
     """
     prefixed = [f"{_get_prefix(c)}{c}" for c in codes]
-    url = "https://qt.gtimg.cn/q=" + ",".join(prefixed)
+    url = "https://qt.gtimg.cn/q=" + ",".join(prefixed)#https://qt.gtimg.cn/q=sh600519,sz000001,bj830799
     req = urllib.request.Request(url)
     req.add_header("User-Agent", "Mozilla/5.0")
     resp = urllib.request.urlopen(req, timeout=10)
@@ -527,7 +527,7 @@ def _tencent_quote(codes: list[str]) -> dict[str, dict]:
 
 
 # ---------------------------------------------------------------------------
-# Eastmoney Datacenter unified helper (龙虎榜/解禁 etc.)
+# Eastmoney Datacenter unified helper (龙虎榜/解禁 北向 etc.)
 # ---------------------------------------------------------------------------
 
 _DATACENTER_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get"
@@ -559,7 +559,7 @@ def _em_get(url, params=None, headers=None, timeout=15, **kwargs):
     """
     wait = _EM_MIN_INTERVAL - (time.time() - _em_last_call[0])
     if wait > 0:
-        time.sleep(wait + random.uniform(0.1, 0.5))
+        time.sleep(wait + random.uniform(0.1, 0.5))#抖动
     try:
         return _EM_SESSION.get(
             url, params=params, headers=headers, timeout=timeout, **kwargs
@@ -575,7 +575,7 @@ def _eastmoney_datacenter(
     page_size: int = 50,
     sort_columns: str = "",
     sort_types: str = "-1",
-) -> list[dict]:
+) -> list[dict]:#结构化查询
     """东财数据中心统一查询 — 龙虎榜/解禁 共用."""
     params = {
         "reportName": report_name,
@@ -600,7 +600,7 @@ def _eastmoney_datacenter(
 # ---------------------------------------------------------------------------
 
 
-def _ths_eps_forecast(code: str) -> pd.DataFrame:
+def _ths_eps_forecast(code: str) -> pd.DataFrame:#抓网页 + 解析表格
     """Fetch consensus EPS forecast from 同花顺 (direct HTTP).
 
     Returns DataFrame with columns roughly: 年度, 预测机构数, 最小值, 均值, 最大值.
@@ -608,12 +608,12 @@ def _ths_eps_forecast(code: str) -> pd.DataFrame:
     url = f"https://basic.10jqka.com.cn/new/{code}/worth.html"
     headers = {
         "User-Agent": _UA,
-        "Referer": "https://basic.10jqka.com.cn/",
+        "Referer": "https://basic.10jqka.com.cn/",#服务器判定你不是它自己网页发出的请求，大概率返回一个空白页 / 跳转页 / 反爬拦截页
     }
     r = _requests.get(url, headers=headers, timeout=15)
     r.encoding = "gbk"
     dfs = pd.read_html(io.StringIO(r.text))
-    # Find the table containing EPS data
+    # Find the table containing EPS data，pd.read_html 本身不解析 HTML，它底层必须有解析引擎——lxml（最快）
     for df in dfs:
         cols = [str(c) for c in df.columns]
         if any("每股收益" in c or "均值" in c for c in cols):
@@ -632,7 +632,8 @@ def _sina_kline_fallback(code: str, start_date: str = None, end_date: str = None
 
     Returns DataFrame with columns: Date, Open, High, Low, Close, Volume.
     """
-    prefix = "sh" if code.startswith("6") else "sz"
+    # prefix = "sh" if code.startswith("6") else "sz"
+    prefix=_get_prefix(code)
     url = (
         "http://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
         "CN_MarketData.getKLineData"
@@ -679,7 +680,7 @@ def _last_ohlcv_date(df: pd.DataFrame) -> pd.Timestamp | None:
     dates = pd.to_datetime(df["Date"], errors="coerce")
     if dates.dropna().empty:
         return None
-    return dates.max().normalize()
+    return dates.max().normalize()#取最大的时间，去掉时分秒
 
 
 def _normalize_ohlcv_dates(df: pd.DataFrame) -> pd.DataFrame:
@@ -688,21 +689,21 @@ def _normalize_ohlcv_dates(df: pd.DataFrame) -> pd.DataFrame:
         return df
     df = df.copy()
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.normalize()
-    return df.dropna(subset=["Date"])
+    return df.dropna(subset=["Date"])#只检查 Date 列，凡是 Date 是 NaT 的行都删掉。
 
 
 def _needs_sina_supplement(df: pd.DataFrame, target_date: str | None) -> bool:
     """True when mootdx/cache data is older than the requested cutoff date."""
-    if not target_date:
+    if not target_date:#你期望数据至少覆盖到的截止日期。
         return False
     last_date = _last_ohlcv_date(df)
     if last_date is None:
         return True
     target = pd.to_datetime(target_date).normalize()
-    return last_date < target
+    return last_date < target#需要重新获取数据
 
 
-def _merge_ohlcv(primary: pd.DataFrame, supplement: pd.DataFrame) -> pd.DataFrame:
+def _merge_ohlcv(primary: pd.DataFrame, supplement: pd.DataFrame) -> pd.DataFrame:#"把主源和兜底源的 K 线拼成一张干净表"
     """Merge OHLCV frames, preferring supplement rows on duplicate dates."""
     frames = [frame for frame in (primary, supplement) if frame is not None and not frame.empty]
     if not frames:
@@ -756,7 +757,7 @@ def _load_ohlcv_astock(symbol: str, curr_date: str) -> pd.DataFrame:
     cache_file = os.path.join(cache_dir, f"{code}-astock-daily.csv")
 
     if os.path.exists(cache_file):
-        mtime = datetime.fromtimestamp(os.path.getmtime(cache_file))
+        mtime = datetime.fromtimestamp(os.path.getmtime(cache_file))#最后修改时间modification time
         if mtime.date() == datetime.now().date():
             data = pd.read_csv(cache_file, on_bad_lines="skip", encoding="utf-8")
             data = _normalize_ohlcv_dates(data)
@@ -792,7 +793,7 @@ def _load_ohlcv_astock(symbol: str, curr_date: str) -> pd.DataFrame:
         df = _normalize_ohlcv_dates(df)
     except Exception as e:
         logger.warning("mootdx OHLCV failed for %s: %s, trying sina HTTP fallback", code, e)
-        # Fallback: Sina direct HTTP API
+        # Fallback: Sina direct HTTP API 回退到新浪
         try:
             df = _sina_kline_fallback(code)
             if df.empty:
@@ -823,7 +824,7 @@ def get_stock_data(
     start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
     end_date: Annotated[str, "End date in yyyy-mm-dd format"],
 ) -> str:
-    """Get OHLCV stock price data via mootdx."""
+    """Get OHLCV stock price data via mootdx or Sina"""
     code = _normalize_ticker(symbol)
 
     data_source = "mootdx (TCP)"
@@ -880,9 +881,9 @@ def get_stock_data(
 
     for col in ["Open", "High", "Low", "Close"]:
         if col in df.columns:
-            df[col] = df[col].round(2)
+            df[col] = df[col].round(2)  #对 Series 里每个值四舍五入，保留 2 位小数
 
-    df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
+    df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")#去掉时分秒，保留字符串日期
     csv_out = df[["Date", "Open", "High", "Low", "Close", "Volume"]].to_csv(
         index=False
     )
@@ -926,7 +927,7 @@ def get_indicators(
     look_back_days: Annotated[int, "how many days to look back"],
 ) -> str:
     """Get technical indicators using stockstats on mootdx OHLCV data."""
-    from stockstats import wrap
+    from stockstats import wrap#python第三方库，可用于计算各种指标 stock statistic
 
     code = _normalize_ticker(symbol)
 
@@ -946,14 +947,14 @@ def get_indicators(
 
         # Build date -> value lookup
         ind_dict = {}
-        for _, row in df.iterrows():
+        for _, row in df.iterrows():#逐行遍历，每次返回 (索引, 行数据字典)
             d = row["Date"]
             v = row[indicator]
-            ind_dict[d] = "N/A" if pd.isna(v) else str(round(float(v), 4))
+            ind_dict[d] = "N/A" if pd.isna(v) else str(round(float(v), 4))#v转成浮点数保留4位小数
 
         # Generate output for look_back window
         curr_dt = datetime.strptime(curr_date, "%Y-%m-%d")
-        before = curr_dt - relativedelta(days=look_back_days)
+        before = curr_dt - relativedelta(days=look_back_days)#lookbackday包含周末？
 
         lines = []
         dt = curr_dt
@@ -982,10 +983,58 @@ def get_indicators(
 def get_fundamentals(
     ticker: Annotated[str, "A-stock code"],
     curr_date: Annotated[str, "current date"] = None,
-) -> str:
+) -> str:#
     """Get company fundamentals from Tencent + mootdx + Eastmoney + 同花顺."""
     code = _normalize_ticker(ticker)
-
+    # ============================================================
+    # get_fundamentals() 返回指标汇总
+    # 文件位置: tradingagents/dataflows/a_stock.py
+    # 四个数据源合并输出:
+    #
+    # 一、腾讯行情（估值与实时快照）
+    #   Name: 股票名称
+    #   Price: 当前价格
+    #   PE (TTM): 市盈率（滚动）
+    #   PE (Static): 市盈率（静态）
+    #   PB: 市净率
+    #   Market Cap (100M CNY): 总市值（亿元）
+    #   Float Market Cap (100M CNY): 流通市值（亿元）
+    #   Turnover Rate: 换手率(%)
+    #   Change: 涨跌幅(%)
+    #   Limit Up: 涨停价
+    #   Limit Down: 跌停价
+    #
+    # 二、mootdx 通达信（季度财务快照）
+    #   EPS (Quarterly): 每股收益
+    #   Book Value Per Share: 每股净资产
+    #   ROE (%): 净资产收益率
+    #   Net Profit: 净利润
+    #   Revenue: 营业收入
+    #   Float Shares: 流通股本
+    #   Total Shares: 总股本
+    #
+    # 三、东方财富 push2（基本股票信息）
+    #   行业: 所属行业
+    #   总股本: 总股本
+    #   流通股本: 流通股本
+    #   总市值: 总市值
+    #   流通市值: 流通市值
+    #   上市日期: 上市日期
+    #
+    # 四、同花顺（一致预期 + 衍生指标）
+    #   FY20XX: EPS=…: 机构一致预期每股收益
+    #   range … ~ …: 预测区间（最低~最高）
+    #   N analysts: 覆盖分析师数量
+    #   Forward PE: 远期市盈率
+    #   PEG: 市盈率相对盈利增长比率
+    #   PE Digestion to 30x: PE 消化至 30 倍所需年数
+    #   EPS declining: EPS 下降时提示 PEG 不适用
+    #
+    # 附加提示:
+    #   - 复盘历史日期时会自动加一条 snapshot notice
+    #     （说明估值数据不是当时时点的，避免未来函数偏差）
+    #   - 分析师覆盖 <3 人时会加一条 low coverage 警告
+    # ============================================================
     try:
         lines = []
         # 腾讯行情只有"此刻"的 PE/PB/市值，拿不到历史时点值。复盘历史日期时
@@ -1018,7 +1067,7 @@ def get_fundamentals(
 
         # --- mootdx: financial snapshot (quarterly) ---
         try:
-            fin = _mootdx_call("finance", symbol=code)
+            fin = _mootdx_call("finance", symbol=code)#返回一个包含股票基本面财务数据的 Python 字典
             if fin is not None and not (
                 isinstance(fin, pd.DataFrame) and fin.empty
             ):
@@ -1036,7 +1085,7 @@ def get_fundamentals(
                 for field, label in field_map.items():
                     if field in idx:
                         val = row[field]
-                        if val is not None and str(val) != "nan":
+                        if val is not None and str(val) != "nan" and not pd.isna(val):
                             lines.append(f"{label}: {val}")
         except Exception as e:
             logger.warning("mootdx finance failed for %s: %s", code, e)
@@ -1046,8 +1095,8 @@ def get_fundamentals(
             market_code = 1 if code.startswith("6") else 0
             _info_url = "https://push2.eastmoney.com/api/qt/stock/get"
             _info_params = {
-                "fltt": "2",
-                "invt": "2",
+                "fltt": "2",#浮点数精度
+                "invt": "2",#后复权
                 "fields": "f57,f58,f84,f85,f127,f116,f117,f189,f43",
                 "secid": f"{market_code}.{code}",
             }
@@ -1097,7 +1146,7 @@ def get_fundamentals(
                         lines.append("  Warning: low coverage (<3 analysts)")
                     eps_by_year[year] = mean_eps
 
-                # Forward PE / PEG / PE digestion
+                # Forward PE / PEG / PE digestion 远期市盈率 市盈率增长率 PE消化
                 try:
                     tq = _tencent_quote([code])
                     if code in tq:
@@ -1397,7 +1446,7 @@ def get_news(
     ticker: Annotated[str, "A-stock code"],
     start_date: Annotated[str, "Start date yyyy-mm-dd"],
     end_date: Annotated[str, "End date yyyy-mm-dd"],
-) -> str:
+) -> str:#个股新闻 东财 新浪
     """Get stock-specific news via East Money direct API (Sina as fallback)."""
     code = _normalize_ticker(ticker)
 
@@ -1468,6 +1517,8 @@ def get_global_news(
     look_back_days: Annotated[int, "Days to look back"] = 7,
     limit: Annotated[int, "Max articles"] = 10,
 ) -> str:
+    #两个来源：财联社电报（ctime 是 Unix 时间戳，用 datetime.fromtimestamp(int(ctime)) 转日期）+ 东财 7×24 快讯。
+    # 合并后按标题去重（seen 集合判断见没见过），截取前 limit 条。
     """Get China/global financial news via direct HTTP (CLS + Eastmoney)."""
     start_dt = datetime.strptime(curr_date, "%Y-%m-%d") - relativedelta(
         days=look_back_days
@@ -1564,7 +1615,7 @@ def get_global_news(
 
 def get_insider_transactions(
     ticker: Annotated[str, "A-stock code"],
-) -> str:
+) -> str:#A 股没有美股意义的内部人交易披露，这里取最接近的等价物：mootdx F10 的「股东研究」文本。
     """Get shareholder/insider activity via mootdx F10.
 
     Note: A-stock insider transaction data differs from US markets.
@@ -1613,7 +1664,7 @@ def get_insider_transactions(
 def get_profit_forecast(
     ticker: Annotated[str, "A-stock code"],
     curr_date: Annotated[str, "current date — 用于判断是否在复盘历史"] = None,
-) -> str:
+) -> str:#盈利预测,同花顺一致预期 + Forward PE/PEG/消化年限计算
     """Get consensus EPS forecasts with forward valuation (同花顺 direct HTTP)."""
     code = _normalize_ticker(ticker)
 
@@ -1708,7 +1759,7 @@ def get_profit_forecast(
 
 def get_hot_stocks(
     curr_date: Annotated[str, "Date YYYY-MM-DD, empty string for today"] = "",
-) -> str:
+) -> str:#同花顺“强势股”接口：当天涨停股 + 人工编辑的热点归因标签
     """Get strong stocks with topic attribution from 同花顺 editorial team.
 
     Returns stocks that hit limit-up with human-curated reason tags
@@ -1847,7 +1898,7 @@ def get_northbound_flow(
     include_history: Annotated[
         bool, "Include historical daily data (last 20 trading days)"
     ] = False,
-) -> str:
+) -> str:#沪股通/深股通（外资通过香港买 A 股的通道）净买入：
     """Get northbound capital flow (沪深股通) from 同花顺 hsgtApi.
 
     Realtime: minute-level cumulative net buying for HGT(沪股通) + SGT(深股通).
@@ -1965,7 +2016,7 @@ _BAIDU_PAE_HEADERS = {
 
 def get_concept_blocks(
     ticker: Annotated[str, "A-stock code (e.g. 688017)"],
-) -> str:
+) -> str:#股票属于哪些概念/行业/地域板块及当日涨跌
     """Get concept/sector/region blocks that a stock belongs to (百度股市通).
 
     Returns industry classification (申万), concept themes, and region.
@@ -2047,7 +2098,7 @@ def get_fund_flow(
     include_history: Annotated[
         bool, "Include historical daily fund flow (last 20 days)"
     ] = True,
-) -> str:
+) -> str:#东财 push2 的主力/大单/中单/小单/超大单净流入
     """Get individual stock fund flow from 东财 push2.
 
     Realtime: minute-level main/large/medium/small/super order net inflow.

@@ -12,6 +12,7 @@ import re
 
 # 辩手把每条发言拼成「{角色} Analyst: {正文}」（见 bull/bear 及三个 risk debator 的
 # argument 构造）。按「换行 + 角色前缀」切分出各条发言；正文几乎不会出现这类前缀。
+#两轮辩论的压缩，默认情况下不会用到（<=4）
 _ROUND_SPLIT = re.compile(
     r"\n(?=(?:Bull|Bear|Aggressive|Conservative|Neutral) Analyst:)"
 )

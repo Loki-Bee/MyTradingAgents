@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
-
+#获取单个或多个技术指标。
 @tool
 def get_indicators(
     symbol: Annotated[str, "6-digit A-stock code (e.g. 600379). Must be numeric, NOT company name or Chinese text"],

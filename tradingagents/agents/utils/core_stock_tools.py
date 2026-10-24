@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
-
+#获取股票 OHLCV 行情数据。
 
 @tool
 def get_stock_data(

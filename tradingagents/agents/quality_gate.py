@@ -73,7 +73,7 @@ def _build_review_prompt(
         name = ANALYST_NAMES[analyst_type]
         content = reports.get(field, "（未运行）")
         if not content:
-            content = "（报告为空）"
+            content = f"（{name}报告为空）"
         if len(content) > 3000:
             content = content[:3000] + "\n... (truncated for review)"
         report_sections.append(f"### {name} ({analyst_type})\n{content}")

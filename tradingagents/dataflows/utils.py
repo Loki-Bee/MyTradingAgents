@@ -16,7 +16,7 @@ SavePathType = Annotated[str, "File path to save data. If None, data is not save
 _TICKER_PATH_RE = re.compile(r"^[A-Za-z0-9._\-\^]+$")
 _HAS_CHINESE_RE = re.compile(r"[一-鿿]")
 
-
+#处理股票代码，防止非法路径或异常字符串。
 def safe_ticker_component(value: str, *, max_len: int = 32) -> str:
     """Validate ``value`` is safe to interpolate into a filesystem path.
 
@@ -56,7 +56,8 @@ def save_output(data: pd.DataFrame, tag: str, save_path: SavePathType = None) ->
 def get_current_date():
     return date.today().strftime("%Y-%m-%d")
 
-
+# 批量给类里的方法加装饰器。
+# 装饰器本质上是一个“接收函数、返回新函数”的函数。
 def decorate_all_methods(decorator):
     def class_decorator(cls):
         for attr_name, attr_value in cls.__dict__.items():

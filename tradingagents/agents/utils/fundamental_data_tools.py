@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
-
+#获取基本面，财报三表
 
 @tool
 def get_fundamentals(

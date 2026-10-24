@@ -1,6 +1,6 @@
 import tradingagents.default_config as default_config
 from typing import Dict, Optional
-
+#初始化配置，设置配置，获得配置。
 # Use default config but allow it to be overridden
 _config: Optional[Dict] = None
 

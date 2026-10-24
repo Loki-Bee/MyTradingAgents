@@ -5,7 +5,8 @@ from pathlib import Path
 import re
 
 from tradingagents.agents.utils.rating import parse_rating
-
+#给整个系统加“长期记忆”。
+#把每次交易的最终决策写入一个 Markdown 记忆文件。
 
 class TradingMemoryLog:
     """Append-only markdown log of trading decisions and reflections."""

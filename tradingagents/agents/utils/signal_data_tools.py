@@ -1,7 +1,9 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
-
+# 游资追踪师
+# 政策分析师
+# 解禁监控师 服务于A股特有分析师
 
 @tool
 def get_profit_forecast(

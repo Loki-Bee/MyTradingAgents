@@ -4,11 +4,14 @@ The analysis graph can continue even when a vendor endpoint returns an error or
 partial result.  This module keeps those gaps visible after the LLM report is
 finished, and lets the Web UI retry the exact tool calls later.
 """
-
+#  Agent分析过程中，即使某个数据接口返回错误、空数据或者部分缺失，整条分析流程也可能继续运行。
+#  这个文件负责记录哪些数据没拿到，并支持之后重新获取这些数据。
+#  跟踪那些返回了缺失数据或失败数据的数据工具调用。
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import threading
 import time
@@ -18,12 +21,13 @@ from typing import Any
 
 from langchain_core.messages import ToolMessage
 
-from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.default_config import DEFAULT_CONFIG, _TRADINGAGENTS_HOME
 from tradingagents.dataflows.utils import safe_ticker_component
 
-
-_MISSING_DATA_TASKS_FILE = Path.home() / ".tradingagents" / "missing_data_tasks.json"
-_MISSING_DATA_CACHE_DIR = Path.home() / ".tradingagents" / "missing_data_cache"
+_MISSING_DATA_TASKS_FILE = Path(_TRADINGAGENTS_HOME) / "missing_data_tasks.json"
+_MISSING_DATA_CACHE_DIR = Path(_TRADINGAGENTS_HOME) / "missing_data_cache"
+# _MISSING_DATA_TASKS_FILE = os.path.join(_TRADINGAGENTS_HOME, "missing_data_tasks.json") #Path.home() / ".tradingagents" / "missing_data_tasks.json"
+# _MISSING_DATA_CACHE_DIR = os.path.join(_TRADINGAGENTS_HOME, "missing_data_cache")# Path.home() / ".tradingagents" / "missing_data_cache"
 _INDEX_LOCK = threading.RLock()
 # Keep the parsed index in memory between ToolNode calls.  The cache is
 # invalidated after writes and also notices external changes through the file
@@ -118,7 +122,7 @@ def _read_cached_output(task_id: str) -> str | None:
         return None
 
 
-def _index_file_signature(path: Path) -> tuple[int, int] | None:
+def _index_file_signature(path: Path) -> tuple[int, int] | None:#给文件生成一个“签名”。
     try:
         stat = path.stat()
     except OSError:
@@ -147,7 +151,7 @@ def _load_index() -> list[dict[str, Any]]:
             for item in data:
                 if not isinstance(item, dict):
                     continue
-                ticker = str(item.get("ticker", "")).strip().upper()
+                ticker = str(item.get("ticker", "")).strip().upper()#清洗数据，取出 → 处理 → 放回
                 trade_date = str(item.get("trade_date", "")).strip()
                 task_id = str(item.get("id", "")).strip()
                 if not ticker or not trade_date or not task_id:
@@ -313,7 +317,7 @@ def record_tool_result(
     stage_label, report_key = STAGE_LABELS.get(
         stage, (stage or "未知分析段", "")
     )
-    existing = next((entry for entry in entries if entry.get("id") == task_id), None)
+    existing = next((entry for entry in entries if entry.get("id") == task_id), None)#找到entries里第一个id为task_id的元素
     task = existing or {
         "id": task_id,
         "ticker": ticker,
@@ -457,6 +461,8 @@ def get_missing_tasks(
 @_index_transaction
 def mark_resolved_tasks_consumed(ticker: str, trade_date: str) -> None:
     """Archive resolved retry outputs after a fresh full analysis completes."""
+    #1. 把 resolved 状态改成 consumed
+    #2. 删除对应的缓存文件
     ticker = ticker.strip().upper()
     trade_date = trade_date.strip()
     entries = _load_index()

@@ -7,7 +7,7 @@ from langgraph.prebuilt import ToolNode
 from tradingagents.agents import *
 from tradingagents.agents.utils.agent_states import AgentState
 
-from .conditional_logic import ConditionalLogic
+from .conditional_logic import ConditionalLogic  
 
 
 # 需要综合全局信息做决策的两个节点走 deep 档，其余走 quick 档。
@@ -150,7 +150,7 @@ class GraphSetup:
 
         # Define edges
         # Start with the first analyst
-        first_analyst = selected_analysts[0]
+        first_analyst = selected_analysts[0] 
         workflow.add_edge(START, f"{first_analyst.capitalize()} Analyst")
 
         # Connect analysts in sequence

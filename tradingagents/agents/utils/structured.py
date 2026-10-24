@@ -22,7 +22,7 @@ import logging
 from typing import Any, Callable, Optional, TypeVar
 
 from pydantic import BaseModel
-
+#让 某些Agnet的LLM 输出结构化结果
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)

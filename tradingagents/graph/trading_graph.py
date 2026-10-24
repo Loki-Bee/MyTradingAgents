@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, Tuple, List, Optional
-
+from tradingagents.dataflows.a_stock import _tencent_quote
 import yfinance as yf
 
 logger = logging.getLogger(__name__)
@@ -804,6 +804,135 @@ class TradingAgentsGraph:
         finally:
             self.close_graph_run()
 
+    def _get_stock_chinese_name(self,ticker: str) -> str:
+        """查询 A 股中文名，腾讯接口优先，mootdx 兜底，都失败返回空字符串。"""
+        # 第一步：腾讯实时行情接口（HTTP，成功率高）
+        try:
+            quotes = _tencent_quote([ticker])
+            name = quotes.get(ticker, {}).get("name", "")
+            if name:
+                return name
+        except Exception:
+            pass
+
+    def _write_markdown_report(self, directory: Path, trade_date: str, state: dict) -> None:
+        """把最终分析结果从 JSON 同步生成一份 Markdown，方便阅读。
+
+        输出文件和 full_states_log_{date}.json 在同一个目录下。
+        """
+        md_path = directory / f"full_states_report_{trade_date}.md"
+
+        # ---- 查股票中文名 ----
+        ticker = state["company_of_interest"]
+        stock_name = self._get_stock_chinese_name(ticker)
+
+        lines = []
+
+        # ---- 标题 ----
+        if stock_name:
+            lines.append(f"# {ticker} {stock_name} 分析报告")
+        else:
+            lines.append(f"# {ticker} 分析报告")
+        lines.append("")
+        lines.append(f"**交易日期**: {state['trade_date']}")
+        lines.append("")
+
+        # ---- 分析师报告 ----
+        sections = [
+            ("技术分析", "market_report"),
+            ("情绪分析", "sentiment_report"),
+            ("新闻舆情", "news_report"),
+            ("基本面分析", "fundamentals_report"),
+            ("政策分析", "policy_report"),
+            ("游资追踪", "hot_money_report"),
+            ("解禁监控", "lockup_report"),
+        ]
+        for title, key in sections:
+            content = state.get(key, "")
+            if content:
+                lines.append(f"## {title}")
+                lines.append("")
+                lines.append(content)
+                lines.append("")
+
+        # ---- 多空辩论 ----
+        debate = state.get("investment_debate_state", {})
+        if debate:
+            lines.append("## 多空辩论")
+            lines.append("")
+            if debate.get("bull_history"):
+                lines.append("### 多方观点")
+                lines.append("")
+                lines.append(debate["bull_history"])
+                lines.append("")
+            if debate.get("bear_history"):
+                lines.append("### 空方观点")
+                lines.append("")
+                lines.append(debate["bear_history"])
+                lines.append("")
+            if debate.get("judge_decision"):
+                lines.append("### 研究经理裁决")
+                lines.append("")
+                lines.append(debate["judge_decision"])
+                lines.append("")
+
+        # ---- 交易员决策 ----
+        trader = state.get("trader_investment_decision", "")
+        if trader:
+            lines.append("## 交易员建议")
+            lines.append("")
+            lines.append(trader)
+            lines.append("")
+
+        # ---- 风险辩论 ----
+        risk = state.get("risk_debate_state", {})
+        if risk:
+            lines.append("## 风险辩论")
+            lines.append("")
+            for label, key in [
+                ("激进方", "aggressive_history"),
+                ("保守方", "conservative_history"),
+                ("中性方", "neutral_history"),
+            ]:
+                content = risk.get(key, "")
+                if content:
+                    lines.append(f"### {label}")
+                    lines.append("")
+                    lines.append(content)
+                    lines.append("")
+            if risk.get("judge_decision"):
+                lines.append("### 风险经理裁决")
+                lines.append("")
+                lines.append(risk["judge_decision"])
+                lines.append("")
+
+        # ---- 投资计划 ----
+        plan = state.get("investment_plan", "")
+        if plan:
+            lines.append("## 投资计划")
+            lines.append("")
+            lines.append(plan)
+            lines.append("")
+
+        # ---- 最终决策 ----
+        final = state.get("final_trade_decision", "")
+        if final:
+            lines.append("## 最终交易决策")
+            lines.append("")
+            lines.append(final)
+            lines.append("")
+
+        # ---- 数据缺失提示 ----
+        missing = state.get("missing_data_tasks", [])
+        if missing:
+            lines.append("## ⚠️ 数据缺失")
+            lines.append("")
+            lines.append(f"本次分析共有 {len(missing)} 条数据获取失败，完整列表见 JSON 文件。")
+            lines.append("")
+
+        # ---- 写入文件 ----
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file."""
         self.log_states_dict[str(trade_date)] = {
@@ -851,8 +980,10 @@ class TradingAgentsGraph:
 
         log_path = directory / f"full_states_log_{trade_date}.json"
         with open(log_path, "w", encoding="utf-8") as f:
-            json.dump(self.log_states_dict[str(trade_date)], f, indent=4)
-
+            json.dump(self.log_states_dict[str(trade_date)], f, indent=4,ensure_ascii=False)
+            #json.dump(self.log_states_dict[str(trade_date)], f, indent=4, ensure_ascii=False)
+        # ---- 新增：同时生成 Markdown 报告 ----
+        self._write_markdown_report(directory, trade_date, self.log_states_dict[str(trade_date)])
     def process_signal(self, full_signal):
         """Process a signal to extract the core decision."""
         return self.signal_processor.process_signal(full_signal)

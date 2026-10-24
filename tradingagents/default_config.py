@@ -1,7 +1,6 @@
 import os
 
-_TRADINGAGENTS_HOME = os.path.join(os.path.expanduser("~"), ".tradingagents")
-
+_TRADINGAGENTS_HOME = r"E:\Agent_Myproject\tradingagents-data"
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
     "results_dir": os.getenv("TRADINGAGENTS_RESULTS_DIR", os.path.join(_TRADINGAGENTS_HOME, "logs")),
@@ -13,8 +12,8 @@ DEFAULT_CONFIG = {
     "memory_log_max_entries": None,
     # LLM settings
     "llm_provider": "openai",
-    "deep_think_llm": "gpt-5.4",
-    "quick_think_llm": "gpt-5.4-mini",
+    "deep_think_llm": "gpt-5.6-sol",
+    "quick_think_llm": "gpt-5.6-luna",
     # When None, each provider's client falls back to its own default endpoint
     # (api.openai.com for OpenAI, generativelanguage.googleapis.com for Gemini, ...).
     # The CLI overrides this per provider when the user picks one. Keeping a

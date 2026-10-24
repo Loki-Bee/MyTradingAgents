@@ -68,6 +68,6 @@ class Propagator:
         if callbacks:
             config["callbacks"] = callbacks
         return {
-            "stream_mode": "values",
+            "stream_mode": "values",#在图执行的每一步（每个节点运行后），都输出当时完整的全局状态（State）快照。
             "config": config,
         }
